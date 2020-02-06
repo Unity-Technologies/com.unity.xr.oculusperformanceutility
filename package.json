@@ -1,0 +1,7 @@
+{
+  "name": "com.unity.xr.oculusperformanceutility",
+  "displayName": "Unity XR Oculus Performance Utility",
+  "version": "0.1.0-preview",
+  "unity": "2018.1",
+  "description": "Exposed methods and properties used in Oculus Performance Testing."
+}
