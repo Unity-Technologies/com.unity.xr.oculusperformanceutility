@@ -6,5 +6,5 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [0.1.0] - 2019-06-18
 
-### This is the first release of *Unity Package \com.unity.cli-config-manager*.
+### This is the first release of *com.unity.xr.oculusperformanceutility*.
 
