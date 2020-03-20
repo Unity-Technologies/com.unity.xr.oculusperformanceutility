@@ -17,6 +17,10 @@ public static class OculusPerformance
 public class OculusStats
 {
     private static IntegratedSubsystem m_Display;
+#if UNITY_ANDROID && !UNITY_EDITOR
+    private static AndroidJavaObject _androidActivity;
+#endif
+
     [DllImport("OculusXRPlugin", CharSet=CharSet.Auto)]
     private static extern void GetOVRPVersion(byte[] version);
     
@@ -72,14 +76,30 @@ public class OculusStats
                 return val;
             }
         }
-        
+
+        /// Gets the current battery temperature for XR only in degrees Celsius.
+        public static float BatteryTempXR
+        {
+            get
+            {
+                float batteryTemp = 0.0f;
+#if OCULUS_SDK && !UNITY_EDITOR
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "batteryTemperature", out batteryTemp);
+#endif
+                return batteryTemp;
+            }
+        }
+
         /// Gets the current battery temperature in degrees Celsius.
         public static float BatteryTemp
         {
             get
             {
-                float batteryTemp;
-                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "batteryTemperature", out batteryTemp);
+                float batteryTemp = 0.0f;
+#if UNITY_ANDROID && !UNITY_EDITOR
+                AndroidJavaObject intent = GetAndroidIntent();
+                batteryTemp = intent.Call<int>("getIntExtra", "temperature", 0) / 10.0f;
+#endif 
                 return batteryTemp;
             }
         }
@@ -330,4 +350,20 @@ public class OculusStats
         m_Display = displays[0];
         return m_Display;
     }
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+    private static AndroidJavaObject GetAndroidIntent()
+    {
+        if (_androidActivity == null)
+        {
+            var actClass = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+            _androidActivity = actClass.GetStatic<AndroidJavaObject>("currentActivity");
+        }
+
+        AndroidJavaObject context = _androidActivity.Call<AndroidJavaObject>("getApplicationContext");
+        AndroidJavaObject intentFilter = new AndroidJavaObject("android.content.IntentFilter", "android.intent.action.BATTERY_CHANGED");
+
+        return context.Call<AndroidJavaObject>("registerReceiver", null, intentFilter);
+    }
+#endif
 }

@@ -3,5 +3,8 @@
   "displayName": "Unity XR Oculus Performance Utility",
   "version": "0.1.0-preview",
   "unity": "2019.3",
-  "description": "Utility methods used to measure Oculus Performance in Unity."
+  "description": "Utility methods used to measure Oculus Performance in Unity.",
+  "dependencies": {
+		"com.unity.modules.androidjni": "1.0.0"
+	}
 }
