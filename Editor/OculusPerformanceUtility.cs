@@ -1,11 +1,10 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.XR;
-using System.Runtime.InteropServices;
 #if OCULUS_SDK
+using System.Runtime.InteropServices;
+using UnityEngine.XR;
 using XRStats = UnityEngine.XR.Provider.XRStats;
-#endif
 
 public static class OculusPerformance
 {
@@ -15,15 +14,16 @@ public static class OculusPerformance
     [DllImport("OculusXRPlugin", CharSet = CharSet.Auto)]
     public static extern void SetGPULevel(int gpuLevel);
 }
+#endif
 
 public class OculusStats
 {
-#if UNITY_2019_1_OR_NEWER
-    private static IntegratedSubsystem m_Display;
-#endif
 #if UNITY_ANDROID && !UNITY_EDITOR
     private static AndroidJavaObject _androidActivity;
 #endif
+
+#if OCULUS_SDK
+    private static IntegratedSubsystem m_Display;
 
     [DllImport("OculusXRPlugin", CharSet=CharSet.Auto)]
     private static extern void GetOVRPVersion(byte[] version);
@@ -38,21 +38,11 @@ public class OculusStats
             return System.Text.Encoding.ASCII.GetString(buf);
         }
     }
-
-    /// Wrapper function for GetStats
-    public static bool TryGetStat(string statName, out float statValue)
-    {
-#if UNITY_2019_1_OR_NEWER
-        return XRStats.TryGetStat(GetFirstDisplaySubsystem(), statName, out statValue);
-#else
-        statValue=0.0f;
-        return false;
 #endif
-    }
 
     public static class AdaptivePerformance
     {
-#if UNITY_2019_1_OR_NEWER
+#if OCULUS_SDK
         public static float GPUAppTime
         {
             get
@@ -92,55 +82,6 @@ public class OculusStats
                 return val;
             }
         }
-#endif
-        /// Gets the current battery temperature for XR only in degrees Celsius.
-        public static float BatteryTempXR
-        {
-            get
-            {
-                float batteryTemp = 0.0f;
-#if OCULUS_SDK && !UNITY_EDITOR
-                TryGetStat( "batteryTemperature", out batteryTemp);
-#endif
-                return batteryTemp;
-            }
-        }
-
-        /// Gets the current battery temperature in degrees Celsius.
-        public static float BatteryTemp
-        {
-            get
-            {
-                float batteryTemp = 0.0f;
-#if UNITY_ANDROID && !UNITY_EDITOR
-                AndroidJavaObject intent = GetAndroidIntent();
-                batteryTemp = intent.Call<int>("getIntExtra", "temperature", 0) / 10.0f;
-#endif 
-                return batteryTemp;
-            }
-        }
-
-        /// Gets the current available battery charge, ranging from 0 (empty) to 1 (full).
-        public static float BatteryLevel
-        {
-            get
-            {
-                float batteryLevel;
-                TryGetStat( "batteryLevel", out batteryLevel);
-                return batteryLevel;
-            }
-        }
-
-        /// If true, the system is running in a reduced performance mode to save power.
-        public static bool PowerSavingMode
-        {
-            get
-            {
-                float powerSavingMode;
-                TryGetStat( "powerSavingMode", out powerSavingMode);
-                return !(powerSavingMode == 0.0f);
-            }
-        }
 
         /// Returns the recommended amount to scale GPU work in order to maintain framerate.
         /// Can be used to adjust viewportScale and textureScale
@@ -149,7 +90,7 @@ public class OculusStats
             get
             {
                 float performanceScale;
-                TryGetStat( "adaptivePerformanceScale", out performanceScale);
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "adaptivePerformanceScale", out performanceScale);
                 return performanceScale;
             }
         }
@@ -160,7 +101,7 @@ public class OculusStats
             get
             {
                 float cpuLevel;
-                TryGetStat( "cpuLevel", out cpuLevel);
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "cpuLevel", out cpuLevel);
                 return (int) cpuLevel;
             }
         }
@@ -171,12 +112,61 @@ public class OculusStats
             get
             {
                 float gpuLevel;
-                TryGetStat( "gpuLevel", out gpuLevel);
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "gpuLevel", out gpuLevel);
                 return (int) gpuLevel;
             }
         }
+
+        /// If true, the system is running in a reduced performance mode to save power.
+        public static bool PowerSavingMode
+        {
+            get
+            {
+                float powerSavingMode;
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "powerSavingMode", out powerSavingMode);
+                return !(powerSavingMode == 0.0f);
+            }
+        }
+
+        /// Gets the current available battery charge, ranging from 0 (empty) to 1 (full).
+        public static float BatteryLevel
+        {
+            get
+            {
+                float batteryLevel;
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "batteryLevel", out batteryLevel);
+                return batteryLevel;
+            }
+        }
+
+        /// Gets the current battery temperature for XR only in degrees Celsius.
+        public static float BatteryTempXR
+        {
+            get
+            {
+                float batteryTemp = 0.0f;
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "batteryTemperature", out batteryTemp);
+                return batteryTemp;
+            }
+        }
+#endif
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        /// Gets the current battery temperature in degrees Celsius.
+        public static float BatteryTemp
+        {
+            get
+            {
+                float batteryTemp = 0.0f;
+                AndroidJavaObject intent = GetAndroidIntent();
+                batteryTemp = intent.Call<int>("getIntExtra", "temperature", 0) / 10.0f;
+                return batteryTemp;
+            }
+        }
+#endif 
     }
 
+#if OCULUS_SDK
     public static class PerfMetrics
     {
         public static float AppCPUTime
@@ -184,7 +174,7 @@ public class OculusStats
             get
             {
                 float val;
-                TryGetStat( "perfmetrics.appcputime", out val);
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "perfmetrics.appcputime", out val);
                 return val;
             }
         }
@@ -194,7 +184,7 @@ public class OculusStats
             get
             {
                 float val;
-                TryGetStat( "perfmetrics.appgputime", out val);
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "perfmetrics.appgputime", out val);
                 return val;
             }
         }
@@ -205,7 +195,7 @@ public class OculusStats
             get
             {
                 float val;
-                TryGetStat( "perfmetrics.compositorcputime", out val);
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "perfmetrics.compositorcputime", out val);
                 return val;
             }
         }
@@ -215,7 +205,7 @@ public class OculusStats
             get
             {
                 float val;
-                TryGetStat( "perfmetrics.compositorgputime", out val);
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "perfmetrics.compositorgputime", out val);
                 return val;
             }
         }
@@ -225,7 +215,7 @@ public class OculusStats
             get
             {
                 float val;
-                TryGetStat( "perfmetrics.gpuutil", out val);
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "perfmetrics.gpuutil", out val);
                 return val;
             }
         }
@@ -236,7 +226,7 @@ public class OculusStats
             get
             {
                 float val;
-                TryGetStat( "perfmetrics.cpuutilavg", out val);
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "perfmetrics.cpuutilavg", out val);
                 return val;
             }
         }
@@ -246,7 +236,7 @@ public class OculusStats
             get
             {
                 float val;
-                TryGetStat( "perfmetrics.cpuutilworst", out val);
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "perfmetrics.cpuutilworst", out val);
                 return val;
             }
         }
@@ -256,7 +246,7 @@ public class OculusStats
             get
             {
                 float val;
-                TryGetStat( "perfmetrics.cpuclockfreq", out val);
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "perfmetrics.cpuclockfreq", out val);
                 return val;
             }
         }        
@@ -266,7 +256,7 @@ public class OculusStats
             get
             {
                 float val;
-                TryGetStat( "perfmetrics.gpuclockfreq", out val);
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "perfmetrics.gpuclockfreq", out val);
                 return val;
             }
         }
@@ -282,7 +272,7 @@ public class OculusStats
             get
             {
                 float val;
-                TryGetStat( "appstats.appqueueahead", out val);
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "appstats.appqueueahead", out val);
                 return val;
             }
         }
@@ -292,7 +282,7 @@ public class OculusStats
             get
             {
                 float val;
-                TryGetStat( "appstats.cpuelapsedtime", out val);
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "appstats.cpuelapsedtime", out val);
                 return val;
             }
         }
@@ -302,7 +292,7 @@ public class OculusStats
             get
             {
                 float val;
-                TryGetStat( "appstats.compositordroppedframes", out val);
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "appstats.compositordroppedframes", out val);
                 return val;
             }
         }
@@ -312,7 +302,7 @@ public class OculusStats
             get
             {
                 float val;
-                TryGetStat( "appstats.compositorlatency", out val);
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "appstats.compositorlatency", out val);
                 return val;
             }
         }
@@ -322,7 +312,7 @@ public class OculusStats
             get
             {
                 float val;
-                TryGetStat( "appstats.compositorcputime", out val);
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "appstats.compositorcputime", out val);
                 return val;
             }
         }
@@ -332,7 +322,7 @@ public class OculusStats
             get
             {
                 float val;
-                TryGetStat( "appstats.compositorcpustartgpuendelapsedtime", out val);
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "appstats.compositorcpustartgpuendelapsedtime", out val);
                 return val;
             }
         }
@@ -342,7 +332,7 @@ public class OculusStats
             get
             {
                 float val;
-                TryGetStat( "appstats.compositorgpuendtovsyncelapsedtime", out val);
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "appstats.compositorgpuendtovsyncelapsedtime", out val);
                 return val;
             }
         }
@@ -351,7 +341,6 @@ public class OculusStats
         public static extern void EnableAppMetrics(bool enable);
     }
 
-#if UNITY_2019_1_OR_NEWER
     private static IntegratedSubsystem GetFirstDisplaySubsystem()
     {
         if (m_Display != null)
