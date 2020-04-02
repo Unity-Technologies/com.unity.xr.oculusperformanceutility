@@ -1,9 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-#if OCULUS_SDK
-using System.Runtime.InteropServices;
 using UnityEngine.XR;
+using System.Runtime.InteropServices;
 using XRStats = UnityEngine.XR.Provider.XRStats;
 
 public static class OculusPerformance
@@ -14,16 +13,13 @@ public static class OculusPerformance
     [DllImport("OculusXRPlugin", CharSet = CharSet.Auto)]
     public static extern void SetGPULevel(int gpuLevel);
 }
-#endif
 
 public class OculusStats
 {
+    private static IntegratedSubsystem m_Display;
 #if UNITY_ANDROID && !UNITY_EDITOR
     private static AndroidJavaObject _androidActivity;
 #endif
-
-#if OCULUS_SDK
-    private static IntegratedSubsystem m_Display;
 
     [DllImport("OculusXRPlugin", CharSet=CharSet.Auto)]
     private static extern void GetOVRPVersion(byte[] version);
@@ -38,11 +34,9 @@ public class OculusStats
             return System.Text.Encoding.ASCII.GetString(buf);
         }
     }
-#endif
 
     public static class AdaptivePerformance
     {
-#if OCULUS_SDK
         public static float GPUAppTime
         {
             get
@@ -83,6 +77,55 @@ public class OculusStats
             }
         }
 
+        /// Gets the current battery temperature for XR only in degrees Celsius.
+        public static float BatteryTempXR
+        {
+            get
+            {
+                float batteryTemp = 0.0f;
+#if OCULUS_SDK && !UNITY_EDITOR
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "batteryTemperature", out batteryTemp);
+#endif
+                return batteryTemp;
+            }
+        }
+
+        /// Gets the current battery temperature in degrees Celsius.
+        public static float BatteryTemp
+        {
+            get
+            {
+                float batteryTemp = 0.0f;
+#if UNITY_ANDROID && !UNITY_EDITOR
+                AndroidJavaObject intent = GetAndroidIntent();
+                batteryTemp = intent.Call<int>("getIntExtra", "temperature", 0) / 10.0f;
+#endif 
+                return batteryTemp;
+            }
+        }
+        
+        /// Gets the current available battery charge, ranging from 0 (empty) to 1 (full).
+        public static float BatteryLevel
+        {
+            get
+            {
+                float batteryLevel;
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "batteryLevel", out batteryLevel);
+                return batteryLevel;
+            }
+        }
+
+        /// If true, the system is running in a reduced performance mode to save power.
+        public static bool PowerSavingMode
+        {
+            get
+            {
+                float powerSavingMode;
+                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "powerSavingMode", out powerSavingMode);
+                return !(powerSavingMode == 0.0f);
+            }
+        }
+
         /// Returns the recommended amount to scale GPU work in order to maintain framerate.
         /// Can be used to adjust viewportScale and textureScale
         public static float AdaptivePerformanceScale
@@ -116,57 +159,8 @@ public class OculusStats
                 return (int) gpuLevel;
             }
         }
-
-        /// If true, the system is running in a reduced performance mode to save power.
-        public static bool PowerSavingMode
-        {
-            get
-            {
-                float powerSavingMode;
-                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "powerSavingMode", out powerSavingMode);
-                return !(powerSavingMode == 0.0f);
-            }
-        }
-
-        /// Gets the current available battery charge, ranging from 0 (empty) to 1 (full).
-        public static float BatteryLevel
-        {
-            get
-            {
-                float batteryLevel;
-                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "batteryLevel", out batteryLevel);
-                return batteryLevel;
-            }
-        }
-
-        /// Gets the current battery temperature for XR only in degrees Celsius.
-        public static float BatteryTempXR
-        {
-            get
-            {
-                float batteryTemp = 0.0f;
-                XRStats.TryGetStat(GetFirstDisplaySubsystem(), "batteryTemperature", out batteryTemp);
-                return batteryTemp;
-            }
-        }
-#endif
-
-#if UNITY_ANDROID && !UNITY_EDITOR
-        /// Gets the current battery temperature in degrees Celsius.
-        public static float BatteryTemp
-        {
-            get
-            {
-                float batteryTemp = 0.0f;
-                AndroidJavaObject intent = GetAndroidIntent();
-                batteryTemp = intent.Call<int>("getIntExtra", "temperature", 0) / 10.0f;
-                return batteryTemp;
-            }
-        }
-#endif 
     }
 
-#if OCULUS_SDK
     public static class PerfMetrics
     {
         public static float AppCPUTime
@@ -341,6 +335,7 @@ public class OculusStats
         public static extern void EnableAppMetrics(bool enable);
     }
 
+
     private static IntegratedSubsystem GetFirstDisplaySubsystem()
     {
         if (m_Display != null)
@@ -355,7 +350,6 @@ public class OculusStats
         m_Display = displays[0];
         return m_Display;
     }
-#endif 
 
 #if UNITY_ANDROID && !UNITY_EDITOR
     private static AndroidJavaObject GetAndroidIntent()
